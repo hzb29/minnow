@@ -8,6 +8,7 @@
 #include "address.hh"
 #include "ethernet_frame.hh"
 #include "ipv4_datagram.hh"
+#include "arp_message.hh" // 注意这里的头文件依赖关系被我修改过
 
 // A "network interface" that connects IP (the internet layer, or network layer)
 // with Ethernet (the network access layer, or link layer).
@@ -85,8 +86,9 @@ private:
     EthernetAddress get_ether() const noexcept { return ether_addr_; }
     // 等价于调用 `tick()`，为变更计时器提供一个语法糖，语法糖在 `NetworkInterface::tick` 中有用
     address_mapping& operator+=( const size_t ms_time_passed ) noexcept { return tick( ms_time_passed ); }
-    auto operator<=>( const size_t deadline ) const { return timer_ <=> deadline; }
     address_mapping& tick( const size_t ms_time_passed ) noexcept;
+    auto operator<=>( const size_t deadline ) const { return timer_ <=> deadline; }
+    
   };
 
   // Human-readable name of the interface

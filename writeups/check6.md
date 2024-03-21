@@ -1,4 +1,4 @@
-Checkpoint 3 Writeup
+Checkpoint 6 Writeup
 ====================
 
 My name: [your name here]
@@ -11,7 +11,7 @@ I would like to thank/reward these classmates for their help: [list sunetids her
 
 This checkpoint took me about [n] hours to do. I [did/did not] attend the lab session.
 
-Program Structure and Design of the TCPSender [Describe data
+Program Structure and Design of the Router [Describe data
 structures and approach taken. Describe alternative designs considered
 or tested.  Describe benefits and weaknesses of your design compared
 with alternatives -- perhaps in terms of simplicity/complexity, risk

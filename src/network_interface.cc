@@ -1,6 +1,5 @@
 #include <iostream>
 
-#include "arp_message.hh"
 #include "exception.hh"
 #include "network_interface.hh"
 
@@ -27,6 +26,7 @@ NetworkInterface::NetworkInterface( string_view name,
 //! can be converted to a uint32_t (raw 32-bit IP address) by using the Address::ipv4_numeric() method.
 void NetworkInterface::send_datagram( const InternetDatagram& dgram, const Address& next_hop )
 {
+  // Your code here.
   const uint32_t target_ip = next_hop.ipv4_numeric();
   auto iter = mapping_table_.find( target_ip );
   if ( iter == mapping_table_.end() ) {
@@ -45,6 +45,7 @@ void NetworkInterface::send_datagram( const InternetDatagram& dgram, const Addre
 //! \param[in] frame the incoming Ethernet frame
 void NetworkInterface::recv_frame( const EthernetFrame& frame )
 {
+  // Your code here.
   if ( frame.header.dst != ETHERNET_BROADCAST && frame.header.dst != ethernet_address_ )
     return; // 丢弃目的地址既不是广播地址也不是本接口的数据帧
 
@@ -77,9 +78,10 @@ void NetworkInterface::recv_frame( const EthernetFrame& frame )
         case ARPMessage::OPCODE_REPLY: {
           // 遍历队列发出旧数据帧
           auto [head, tail] = dgrams_waiting_addr_.equal_range( arp_msg.sender_ip_address );
-          for ( auto iter = head; iter != tail; ++iter )
+          for_each( head, tail, [this, &arp_msg]( auto&& iter ) -> void {
             transmit(
-              make_frame( EthernetHeader::TYPE_IPv4, serialize( iter->second ), arp_msg.sender_ethernet_address ) );
+              make_frame( EthernetHeader::TYPE_IPv4, serialize( iter.second ), arp_msg.sender_ethernet_address ) );
+          } );
           if ( head != tail )
             dgrams_waiting_addr_.erase( head, tail );
         } break;
@@ -97,6 +99,7 @@ void NetworkInterface::recv_frame( const EthernetFrame& frame )
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
 void NetworkInterface::tick( const size_t ms_since_last_tick )
 {
+  // Your code here.
   constexpr size_t ms_mappings_ttl = 30'000, ms_resend_arp = 5'000;
   // 刷新数据表，删掉超时项
   auto flush_timer = [&ms_since_last_tick]( auto& datasheet, const size_t deadline ) -> void {
@@ -115,31 +118,22 @@ ARPMessage NetworkInterface::make_arp_message( const uint16_t option,
                                                const uint32_t target_ip,
                                                optional<EthernetAddress> target_ether ) const
 {
-  ARPMessage msg;
-  msg.sender_ethernet_address = ethernet_address_;
-  msg.sender_ip_address = ip_address_.ipv4_numeric();
-  msg.target_ip_address = target_ip;
-  if ( target_ether.has_value() )
-    msg.target_ethernet_address = move( *target_ether );
-  msg.opcode = option;
-
-  return msg;
+  return { .opcode = option,
+           .sender_ethernet_address = ethernet_address_,
+           .sender_ip_address = ip_address_.ipv4_numeric(),
+           .target_ethernet_address = target_ether.has_value() ? move( *target_ether ) : EthernetAddress {},
+           .target_ip_address = target_ip };
 }
 
 EthernetFrame NetworkInterface::make_frame( const uint16_t protocol,
                                             std::vector<std::string> payload,
                                             optional<EthernetAddress> dst ) const
 {
-  EthernetFrame frame;
-  if ( dst.has_value() )
-    frame.header.dst = move( *dst );
-  else
-    frame.header.dst = ETHERNET_BROADCAST;
-  frame.header.src = ethernet_address_;
-  frame.header.type = protocol;
-  frame.payload = move( payload );
-
-  return frame;
+  return { .header { .dst = dst.has_value() ? move( *dst ) : ETHERNET_BROADCAST,
+                     .src = ethernet_address_,
+                     .type = protocol },
+           .payload = move( payload ) };
+  ;
 }
 
 NetworkInterface::address_mapping& NetworkInterface::address_mapping::tick( const size_t ms_time_passed ) noexcept
